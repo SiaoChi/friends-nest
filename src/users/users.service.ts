@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateUserDto } from '../dto/users-dto';
+import { CreateUserDto, LoginUserDto } from '../dto/users-dto';
 import { Login } from '../model/users/login.entity';
 import { User } from '../model/users/user.entity';
 import { Repository } from 'typeorm';
@@ -36,10 +36,42 @@ export class UsersService {
       userLogin.token = await bcrypt.hash(password, 10);
       const saveLogin = await this.loginRepository.save(userLogin);
 
-      return { saveUser, saveLogin };
+      return { saveUser, saveLoginId: saveLogin.id };
     } catch (err) {
-      console.log(err);
       throw new HttpException(err, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  async loginUser(loginUserDto: LoginUserDto): Promise<object> {
+    const { email, password } = loginUserDto;
+    const user = await this.userRepository.findOne({ where: { email } });
+    const login = await this.loginRepository.findOne({
+      where: { id: user.id },
+    });
+
+    // to be add >> add token to httpHeader
+    if (user && (await login.comparePassword(password))) {
+      const userId = user.id;
+      const expiredTime = 60 * 60;
+      const data = {
+        message: 'User login successfully',
+        userId,
+        expiredTime,
+      };
+      return data;
+    } else {
+      throw new HttpException(
+        'Invalid email or password',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+  }
+
+  async findUserById(id: number): Promise<object> {
+    const userInfo = await this.userRepository.findOne({ where: { id } });
+    if (!userInfo)
+      throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
+
+    return userInfo;
   }
 }

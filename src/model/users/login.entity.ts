@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Entity({ name: 'user_login_v1' })
 export class Login {
@@ -25,4 +26,8 @@ export class Login {
   @OneToOne(() => User)
   @JoinColumn({ name: 'id' })
   user: User;
+
+  async comparePassword(input: string): Promise<boolean> {
+    return bcrypt.compare(input, this.token);
+  }
 }
