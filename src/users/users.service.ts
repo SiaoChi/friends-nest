@@ -17,11 +17,6 @@ export class UsersService {
 
   async createUser(createUserDto: CreateUserDto): Promise<object> {
     const { name, email, password } = createUserDto;
-    const isExisted = await this.userRepository.findOne({ where: { email } });
-
-    if (isExisted) {
-      throw new HttpException('email already exists', HttpStatus.CONFLICT);
-    }
     try {
       // login token and userDetail are restore to different table
       const user = new User();
@@ -38,7 +33,11 @@ export class UsersService {
 
       return { saveUser, saveLoginId: saveLogin.id };
     } catch (err) {
-      throw new HttpException(err, HttpStatus.BAD_REQUEST);
+      // if email already exists MySQL will present err.code '23505'
+      if (err.code === '23505') {
+        throw new HttpException('Email already exists', HttpStatus.BAD_REQUEST);
+      }
+      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -49,7 +48,7 @@ export class UsersService {
       where: { id: user.id },
     });
 
-    // to be add >> add token to httpHeader
+    // to be add >> add token to httpHeader for login authentication
     if (user && (await login.comparePassword(password))) {
       const userId = user.id;
       const expiredTime = 60 * 60;

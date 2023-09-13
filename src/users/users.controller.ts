@@ -23,6 +23,7 @@ export class UsersController {
 
   @Post('/signin')
   loginUser(@Body() loginUserDto: LoginUserDto): object {
+    console.log(loginUserDto);
     const data = this.usersService.loginUser(loginUserDto);
     return data;
   }
