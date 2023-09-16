@@ -8,10 +8,13 @@ import {
 import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
 
-@Entity({ name: 'user_login_v1' })
+@Entity({ name: 'user_login_v2' })
 export class Login {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column()
+  user_id: string;
 
   @Column({ length: 55 })
   name: string;
@@ -19,12 +22,10 @@ export class Login {
   @Column({ length: 255 })
   token: string;
 
-  @Column()
-  user_id: number;
-
   // OneToOne relation to User.id
   @OneToOne(() => User)
-  @JoinColumn({ name: 'id' })
+  // the column name must be the same between two entity
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   async comparePassword(input: string): Promise<boolean> {

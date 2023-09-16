@@ -1,10 +1,19 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  PrimaryColumn,
+  PrimaryGeneratedColumn,
+  Unique,
+} from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 
-@Entity({ name: 'user_v1' })
+@Entity({ name: 'user_v2' })
 @Unique(['email'])
 export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  // @PrimaryColumn({ length: 255 })
+  @PrimaryGeneratedColumn('uuid', { name: 'user_id' })
+  user_id: string;
 
   @Column({ length: 100 })
   name: string;

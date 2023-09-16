@@ -32,3 +32,12 @@ export class LoginUserDto {
   @IsString()
   readonly password: string;
 }
+
+export class LoginSuccessDto {
+  user: object;
+
+  @IsString()
+  token: string;
+
+  expiredTime: number;
+}
