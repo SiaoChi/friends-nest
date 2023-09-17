@@ -25,7 +25,6 @@ export class UsersController {
     const data = await this.usersService.createUser(createUserDto);
     const { token } = data;
     res.header('Authorization', `Bearer ${token}`);
-    console.log(data);
     return res.status(HttpStatus.OK).json(data);
   }
 

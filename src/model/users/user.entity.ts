@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid';
 @Entity({ name: 'user_v2' })
 @Unique(['email'])
 export class User {
-  // @PrimaryColumn({ length: 255 })
   @PrimaryGeneratedColumn('uuid', { name: 'user_id' })
   user_id: string;
 
