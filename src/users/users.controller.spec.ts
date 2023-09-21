@@ -10,7 +10,6 @@ import { HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { UserTag } from '../model/users/user.tag.entity';
 import { S3Service } from '../utils/s3.service';
-import { JwtService } from '@nestjs/jwt';
 
 class RepositoryMock {}
 
@@ -40,7 +39,7 @@ describe('UsersController', () => {
         },
       ],
     }).compile();
-
+    // jwtModule = module.get<JwtModule>(JwtModule);
     service = module.get<UsersService>(UsersService);
     controller = module.get<UsersController>(UsersController);
   });
@@ -72,7 +71,7 @@ describe('UsersController', () => {
         curr_problem: null,
         created_at: '2023-09-14T05:39:15.000Z',
       },
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
+      access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
       expiredTime: 216000,
     };
 
@@ -97,7 +96,7 @@ describe('UsersController', () => {
       expect(data).toBe(userSignInRes);
       expect(responseMock.header).toHaveBeenCalledWith(
         'Authorization',
-        `Bearer ${userSignInRes.token}`,
+        `Bearer ${userSignInRes.access_token}`,
       );
       expect(responseMock.status).toHaveBeenCalledWith(HttpStatus.OK);
       expect(responseMock.json).toHaveBeenCalledWith(userSignInRes);
