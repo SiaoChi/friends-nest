@@ -1,11 +1,23 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateUserDto, LoginSuccessDto, LoginUserDto } from '../dto/users-dto';
+import {
+  CreateUserDto,
+  LoginSuccessDto,
+  LoginUserDto,
+  UserProfileDto,
+} from '../dto/users-dto';
 import { Login } from '../model/users/login.entity';
 import { User } from '../model/users/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { TokenService } from '../utils/token.service';
+import { AuthService } from '../utils/token.service';
+import { UserTag } from '../model/users/user.tag.entity';
+import { S3Service } from '../utils/s3.service';
 
 @Injectable()
 export class UsersService {
@@ -14,7 +26,10 @@ export class UsersService {
     private userRepository: Repository<User>,
     @InjectRepository(Login)
     private loginRepository: Repository<Login>,
-    private readonly tokenService: TokenService,
+    @InjectRepository(UserTag)
+    private userTagRepository: Repository<UserTag>,
+    private readonly tokenService: AuthService,
+    private readonly s3Service: S3Service,
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<LoginSuccessDto> {
@@ -35,45 +50,104 @@ export class UsersService {
     userLogin.name = name;
     userLogin.token = await bcrypt.hash(password, 10);
     await this.loginRepository.save(userLogin);
-    const jwtToken = this.tokenService.generateToken({ id: user.user_id });
+    const jwtToken = this.tokenService.generateToken(user.user_id);
     const expiredTime = this.tokenService.EXPIRE_TIME;
 
-    return { user: saveUser, token: jwtToken, expiredTime };
+    return { user: saveUser, access_token: jwtToken, expiredTime };
   }
 
   async login(loginUserDto: LoginUserDto): Promise<LoginSuccessDto> {
     const { email, password } = loginUserDto;
 
     const user = await this.userRepository.findOne({ where: { email } });
-    if (!user)
-      throw new HttpException(
-        'Invalid email or password',
-        HttpStatus.UNAUTHORIZED,
-      );
+    if (!user) throw new UnauthorizedException();
     const login = await this.loginRepository.findOne({
       where: { user_id: user.user_id },
     });
     const isValid = await login.comparePassword(password);
-    if (!isValid)
-      throw new HttpException(
-        'Invalid email or password',
-        HttpStatus.UNAUTHORIZED,
-      );
+    if (!isValid) throw new UnauthorizedException();
 
-    const jwtToken = this.tokenService.generateToken({
-      id: user.user_id,
-    });
+    const jwtToken = this.tokenService.generateToken(user.user_id);
     const expiredTime = this.tokenService.EXPIRE_TIME;
-    return { user, token: jwtToken, expiredTime };
+    return { user, access_token: jwtToken, expiredTime };
   }
 
-  async findUserById(id: string): Promise<object> {
+  async findUserById(user_id: string): Promise<object> {
     const userInfo = await this.userRepository.findOne({
-      where: { user_id: id },
+      where: { user_id },
     });
     if (!userInfo)
       throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
 
     return userInfo;
+  }
+
+  async updateUserProfile(body: UserProfileDto, file: object): Promise<object> {
+    console.log('body', body);
+    const {
+      user_id,
+      name,
+      email,
+      birth,
+      location,
+      sick_year,
+      hospital,
+      level,
+      carer,
+      curr_problem,
+      tags,
+    } = body;
+
+    let { picture } = body;
+
+    const userInfo = await this.userRepository.findOne({
+      where: { user_id },
+    });
+    if (!userInfo)
+      throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
+
+    if (file) {
+      const fileResponse = await this.s3Service.uploadFile(file);
+      picture = fileResponse.Location;
+      userInfo.picture = picture;
+    }
+    userInfo.name = name;
+    userInfo.email = email;
+    userInfo.birth = birth;
+    userInfo.location = location;
+    userInfo.sick_year = sick_year;
+    userInfo.hospital = hospital;
+    userInfo.level = level;
+    userInfo.carer = carer;
+    userInfo.curr_problem = curr_problem;
+    const userInfoSave = await this.userRepository.save(userInfo);
+    const userTagSave = await this.saveUserTags(userInfo.user_id, tags);
+    console.log(userInfoSave, userTagSave);
+    return { userInfoSave, userTagSave };
+  }
+
+  async saveUserTags(user_id: string, tagIds: number[]): Promise<object> {
+    if (tagIds && tagIds.length > 0) {
+      // 先刪除現有的關聯
+      await this.userTagRepository.delete({ user_id });
+
+      // 創建新的關聯
+      const userTagData = tagIds.map((tag_id) => ({
+        user_id,
+        tag_id,
+      }));
+
+      const userTagEntities = userTagData.map((data) => {
+        const userTag = new UserTag();
+        userTag.user_id = data.user_id;
+        userTag.tag_id = data.tag_id;
+        return userTag;
+      });
+
+      // 需要修改成return tagId array
+      const result = await this.userTagRepository.insert(userTagEntities);
+
+      return result.generatedMaps;
+    }
   }
 }

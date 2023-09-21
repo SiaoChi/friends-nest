@@ -4,10 +4,13 @@ import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../model/users/user.entity';
 import { Login } from '../model/users/login.entity';
-import { TokenService } from '../utils/token.service';
-import { CreateUserDto, LoginSuccessDto, LoginUserDto } from '../dto/users-dto';
+import { AuthService } from '../utils/token.service';
+import { CreateUserDto, LoginUserDto } from '../dto/users-dto';
 import { HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
+import { UserTag } from '../model/users/user.tag.entity';
+import { S3Service } from '../utils/s3.service';
+import { JwtService } from '@nestjs/jwt';
 
 class RepositoryMock {}
 
@@ -21,13 +24,18 @@ describe('UsersController', () => {
       controllers: [UsersController],
       providers: [
         UsersService,
-        TokenService,
+        AuthService,
+        S3Service,
         {
           provide: getRepositoryToken(User),
           useClass: RepositoryMock,
         },
         {
           provide: getRepositoryToken(Login),
+          useClass: RepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(UserTag),
           useClass: RepositoryMock,
         },
       ],

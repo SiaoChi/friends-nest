@@ -28,7 +28,7 @@ export class Login {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  async comparePassword(input: string): Promise<boolean> {
-    return bcrypt.compare(input, this.token);
+  async comparePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.token);
   }
 }

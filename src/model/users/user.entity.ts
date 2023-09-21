@@ -2,11 +2,16 @@ import {
   Column,
   Entity,
   Index,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
   PrimaryColumn,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { Tag } from './tag.entity';
 
 @Entity({ name: 'user_v2' })
 @Unique(['email'])
@@ -23,8 +28,8 @@ export class User {
   @Column({ length: 255, nullable: true })
   picture: string;
 
-  @Column({ length: 50, nullable: true })
-  birth: string;
+  @Column({ type: 'date', nullable: true })
+  birth: Date;
 
   @Column({ length: 55, nullable: true })
   location: string;
