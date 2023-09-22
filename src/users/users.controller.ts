@@ -8,6 +8,7 @@ import {
   Param,
   ParseFilePipe,
   Post,
+  Req,
   Res,
   UploadedFile,
   UseGuards,
@@ -19,6 +20,7 @@ import { Response, Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { S3Service } from '../utils/s3.service';
 import { Public } from './user.guard';
+import { request } from 'http';
 
 @Controller('users')
 export class UsersController {
@@ -49,6 +51,15 @@ export class UsersController {
     const { access_token } = data;
     res.header('Authorization', `Bearer ${access_token}`);
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('tag')
+  async findUserTags(@Req() request): Promise<object> {
+    const userId = request.user.userId;
+    console.log(userId);
+    const data = this.usersService.findUserTags(userId);
+    // console.log(data);
+    return data;
   }
 
   @Public()

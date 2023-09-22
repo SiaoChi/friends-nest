@@ -83,7 +83,6 @@ export class UsersService {
   }
 
   async updateUserProfile(body: UserProfileDto, file: object): Promise<object> {
-    console.log('body', body);
     const {
       user_id,
       name,
@@ -111,6 +110,11 @@ export class UsersService {
       picture = fileResponse.Location;
       userInfo.picture = picture;
     }
+
+    if (!file && picture) {
+      userInfo.picture = picture;
+    }
+
     userInfo.name = name;
     userInfo.email = email;
     userInfo.birth = birth;
@@ -121,12 +125,11 @@ export class UsersService {
     userInfo.carer = carer;
     userInfo.curr_problem = curr_problem;
     const userInfoSave = await this.userRepository.save(userInfo);
-    const userTagSave = await this.saveUserTags(userInfo.user_id, tags);
-    console.log(userInfoSave, userTagSave);
-    return { userInfoSave, userTagSave };
+    await this.saveUserTags(userInfo.user_id, tags);
+    return userInfoSave;
   }
 
-  async saveUserTags(user_id: string, tagIds: number[]): Promise<object> {
+  async saveUserTags(user_id: string, tagIds: number[]): Promise<void> {
     if (tagIds && tagIds.length > 0) {
       // 先刪除現有的關聯
       await this.userTagRepository.delete({ user_id });
@@ -144,10 +147,22 @@ export class UsersService {
         return userTag;
       });
 
-      // 需要修改成return tagId array
-      const result = await this.userTagRepository.insert(userTagEntities);
-
-      return result.generatedMaps;
+      // 目前是return rowID
+      await this.userTagRepository.insert(userTagEntities);
     }
+  }
+
+  async findUserTags(user_id: string): Promise<object> {
+    const userTags = await this.userTagRepository.find({
+      // 未知，沒加入relations就無法得到tag_id資料
+      // relations: ['tag_id'],
+      where: { user_id },
+    });
+    console.log(userTags);
+    const tagsArray = userTags.map((item) => {
+      return item.tag_id;
+    });
+
+    return { userId: user_id, tagsArray };
   }
 }
