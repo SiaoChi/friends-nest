@@ -1,16 +1,11 @@
 import {
   Column,
   Entity,
-  Index,
-  JoinColumn,
   JoinTable,
   ManyToMany,
-  ManyToOne,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { Tag } from './tag.entity';
 
 @Entity({ name: 'user_v2' })
@@ -51,4 +46,8 @@ export class User {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
+
+  @ManyToMany(() => Tag)
+  @JoinTable()
+  tags: Tag[];
 }

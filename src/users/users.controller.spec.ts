@@ -10,6 +10,7 @@ import { HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { UserTag } from '../model/users/user.tag.entity';
 import { S3Service } from '../utils/s3.service';
+import { Tag } from '../model/users/tag.entity';
 
 class RepositoryMock {}
 
@@ -35,6 +36,10 @@ describe('UsersController', () => {
         },
         {
           provide: getRepositoryToken(UserTag),
+          useClass: RepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(Tag),
           useClass: RepositoryMock,
         },
       ],

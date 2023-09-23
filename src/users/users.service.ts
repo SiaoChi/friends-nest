@@ -13,11 +13,13 @@ import {
 } from '../dto/users-dto';
 import { Login } from '../model/users/login.entity';
 import { User } from '../model/users/user.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../utils/token.service';
 import { UserTag } from '../model/users/user.tag.entity';
 import { S3Service } from '../utils/s3.service';
+import { Tag } from '../model/users/tag.entity';
+import { async } from 'rxjs';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +30,9 @@ export class UsersService {
     private loginRepository: Repository<Login>,
     @InjectRepository(UserTag)
     private userTagRepository: Repository<UserTag>,
+    @InjectRepository(Tag)
+    private tagRepository: Repository<Tag>,
+
     private readonly tokenService: AuthService,
     private readonly s3Service: S3Service,
   ) {}
@@ -75,6 +80,7 @@ export class UsersService {
   async findUserById(user_id: string): Promise<object> {
     const userInfo = await this.userRepository.findOne({
       where: { user_id },
+      relations: ['tags'],
     });
     if (!userInfo)
       throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
@@ -105,6 +111,7 @@ export class UsersService {
     if (!userInfo)
       throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
 
+    // 加入註解
     if (file) {
       const fileResponse = await this.s3Service.uploadFile(file);
       picture = fileResponse.Location;
@@ -129,40 +136,31 @@ export class UsersService {
     return userInfoSave;
   }
 
-  async saveUserTags(user_id: string, tagIds: number[]): Promise<void> {
+  async saveUserTags(user_id: string, tagIds: any): Promise<object> {
     if (tagIds && tagIds.length > 0) {
-      // 先刪除現有的關聯
-      await this.userTagRepository.delete({ user_id });
-
-      // 創建新的關聯
-      const userTagData = tagIds.map((tag_id) => ({
-        user_id,
-        tag_id,
-      }));
-
-      const userTagEntities = userTagData.map((data) => {
-        const userTag = new UserTag();
-        userTag.user_id = data.user_id;
-        userTag.tag_id = data.tag_id;
-        return userTag;
+      const userToUpdate = await this.userRepository.findOne({
+        where: { user_id },
       });
 
-      // 目前是return rowID
-      await this.userTagRepository.insert(userTagEntities);
+      if (userToUpdate) {
+        const newTagsObj = await this.tagRepository.find({
+          where: { tag_id: In(tagIds) },
+        });
+
+        userToUpdate.tags = newTagsObj;
+        const result = await this.userRepository.save(userToUpdate);
+        return result;
+      }
     }
   }
 
   async findUserTags(user_id: string): Promise<object> {
-    const userTags = await this.userTagRepository.find({
-      // 未知，沒加入relations就無法得到tag_id資料
-      // relations: ['tag_id'],
+    const userTag = await this.userRepository.find({
+      relations: ['tags'],
+      select: ['user_id'],
       where: { user_id },
     });
-    console.log(userTags);
-    const tagsArray = userTags.map((item) => {
-      return item.tag_id;
-    });
 
-    return { userId: user_id, tagsArray };
+    return userTag;
   }
 }

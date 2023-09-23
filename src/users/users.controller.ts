@@ -1,12 +1,15 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   FileTypeValidator,
   Get,
+  HttpException,
   HttpStatus,
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
+  Patch,
   Post,
   Req,
   Res,
@@ -58,7 +61,19 @@ export class UsersController {
     const userId = request.user.userId;
     console.log(userId);
     const data = this.usersService.findUserTags(userId);
-    // console.log(data);
+    return data;
+  }
+
+  @Patch('tag')
+  async updateUserTags(
+    @Req() request,
+    @Body('tags') tags: number[],
+  ): Promise<object> {
+    if (!tags || tags.length === 0) {
+      throw new HttpException('Tags cannot be empty.', HttpStatus.BAD_REQUEST);
+    }
+    const userId = request.user.userId;
+    const data = this.usersService.saveUserTags(userId, tags);
     return data;
   }
 

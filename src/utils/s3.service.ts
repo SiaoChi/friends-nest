@@ -13,6 +13,7 @@ export class S3Service {
   async uploadFile(file) {
     const date = new Date().toJSON();
     const dateStr = date.replace(/-|[A-Z]|\:|\./g, '');
+    // 考慮上傳大頭照是使用UUID，一個人只能上傳一個
     const filename = `${dateStr}${extname(file.originalname)}`;
     return await this.s3_upload(
       file.buffer,
@@ -22,10 +23,10 @@ export class S3Service {
     );
   }
 
-  async s3_upload(file, bucket, name, mimetype) {
+  async s3_upload(file, bucket, filename, mimetype) {
     const params = {
       Bucket: bucket,
-      Key: `friends/${name}`,
+      Key: `friends/${filename}`,
       Body: file,
       ACL: 'public-read',
       ContentType: mimetype,
