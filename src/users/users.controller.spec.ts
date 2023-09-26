@@ -123,12 +123,6 @@ describe('UsersController', () => {
       expect(data).toBe(userSignInRes);
     });
 
-    it('GET /users/:id successful', async () => {
-      jest.spyOn(service, 'findUserById').mockResolvedValue(userSignInRes);
-      const data = await service.login(loginUserDto);
-      expect(data).toBe(userSignInRes);
-    });
-
     it('GET /users/:id failed', async () => {
       const errorMsg = 'user id not found';
 
