@@ -1,3 +1,4 @@
+import { User } from '../model/users/user.entity';
 import {
   IsEmail,
   IsNotEmpty,
@@ -37,7 +38,7 @@ export class LoginUserDto {
 }
 
 export class LoginSuccessDto {
-  user: object;
+  user: User;
 
   @IsString()
   access_token: string;
@@ -61,7 +62,7 @@ export class UserProfileDto {
 
   @IsOptional()
   @IsString()
-  picture: string;
+  pictureUrl: string;
 
   @IsOptional()
   @IsString()

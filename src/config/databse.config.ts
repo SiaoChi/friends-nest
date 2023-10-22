@@ -10,7 +10,7 @@ const databaseConfig: TypeOrmModuleOptions = {
   autoLoadEntities: true,
   entities: [__dirname + '/**/*.entity{.ts,.js}'],
   synchronize: true,
-  logging: true,
+  logging: false,
 };
 
 export default databaseConfig;

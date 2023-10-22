@@ -12,6 +12,7 @@ import { SetMetadata } from '@nestjs/common';
 export const IS_PUBLIC_KEY = 'isPublic';
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 
+// AuthGuard reference by https://docs.nestjs.com/security/authentication
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(

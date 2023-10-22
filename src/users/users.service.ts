@@ -16,10 +16,9 @@ import { User } from '../model/users/user.entity';
 import { In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../utils/token.service';
-import { UserTag } from '../model/users/user.tag.entity';
 import { S3Service } from '../utils/s3.service';
 import { Tag } from '../model/users/tag.entity';
-import { async } from 'rxjs';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class UsersService {
@@ -28,11 +27,10 @@ export class UsersService {
     private userRepository: Repository<User>,
     @InjectRepository(Login)
     private loginRepository: Repository<Login>,
-    @InjectRepository(UserTag)
-    private userTagRepository: Repository<UserTag>,
     @InjectRepository(Tag)
     private tagRepository: Repository<Tag>,
 
+    private readonly redisService: RedisService,
     private readonly tokenService: AuthService,
     private readonly s3Service: S3Service,
   ) {}
@@ -78,6 +76,13 @@ export class UsersService {
   }
 
   async findUserById(user_id: string): Promise<object> {
+    const redisFindUser = await this.redisService.getValue(
+      `userId_profile_${user_id}`,
+    );
+    if (redisFindUser) {
+      const userObject = JSON.parse(redisFindUser);
+      return userObject;
+    }
     const userInfo = await this.userRepository.findOne({
       where: { user_id },
       relations: ['tags'],
@@ -103,7 +108,7 @@ export class UsersService {
       tags,
     } = body;
 
-    let { picture } = body;
+    let { pictureUrl } = body;
 
     const userInfo = await this.userRepository.findOne({
       where: { user_id },
@@ -111,15 +116,22 @@ export class UsersService {
     if (!userInfo)
       throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
 
-    // 加入註解
+    /* there are three scenarios for file
+    1. user upload file 
+    2. user choose default pictureURL
+    3. user didn't change any picture, it would only upload the original URL from database
+    */
+
+    // meet (1) senario
     if (file) {
-      const fileResponse = await this.s3Service.uploadFile(file);
-      picture = fileResponse.Location;
-      userInfo.picture = picture;
+      const fileResponse = await this.s3Service.uploadUserPicture(file);
+      pictureUrl = fileResponse.Location;
+      userInfo.picture = pictureUrl;
     }
 
-    if (!file && picture) {
-      userInfo.picture = picture;
+    // meet (2,3) senario
+    if (!file && pictureUrl) {
+      userInfo.picture = pictureUrl;
     }
 
     userInfo.name = name;
@@ -133,6 +145,12 @@ export class UsersService {
     userInfo.curr_problem = curr_problem;
     const userInfoSave = await this.userRepository.save(userInfo);
     await this.saveUserTags(userInfo.user_id, tags);
+    const expiredTime = 60 * 60 * 24 * 30;
+    await this.redisService.setValue(
+      `userId_profile_${user_id}`,
+      JSON.stringify(userInfoSave),
+      expiredTime,
+    );
     return userInfoSave;
   }
 
