@@ -20,7 +20,7 @@ import { redisStore } from 'cache-manager-redis-store';
         await redisStore({
           // after redis upgrade to v4 the property need to be set in socket object
           socket: {
-            host: 'localhost',
+            host: process.env.ENV,
             port: 6379,
           },
         }),

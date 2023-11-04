@@ -20,7 +20,6 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from '../utils/token.service';
 import { S3Service } from '../utils/s3.service';
 import { Tag } from '../model/users/tag.entity';
-// import { RedisService } from '../redis/redis.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
@@ -154,7 +153,6 @@ export class UsersService {
       JSON.stringify(userInfoSave),
       expiredTime,
     );
-    await this.cacheManager.get(`userId_profile_${user_id}`);
     return userInfoSave;
   }
 
