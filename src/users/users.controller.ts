@@ -17,13 +17,12 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { CreateUserDto, LoginUserDto, UserProfileDto } from '../dto/users-dto';
+import { CreateUserDto, LoginUserDto } from '../dto/users-dto';
 import { UsersService } from './users.service';
 import { Response, Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { S3Service } from '../utils/s3.service';
 import { Public } from './user.guard';
-import { request } from 'http';
 
 @Controller('users')
 export class UsersController {

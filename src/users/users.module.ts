@@ -8,20 +8,19 @@ import { Tag } from '../model/users/tag.entity';
 import { AuthService } from '../utils/token.service';
 import { S3Service } from '../utils/s3.service';
 import { JwtModule } from '@nestjs/jwt';
-import { RedisModule } from '../redis/redis.module';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @Module({
   // app.module has root connection, but for each database must import 'TypeOrmModule.forFeature([entityName])'
   imports: [
-    RedisModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_KEY,
-      signOptions: { expiresIn: '60m' },
+      signOptions: { expiresIn: 60 * 60 * 60 * 30 },
     }),
     TypeOrmModule.forFeature([User, Login, Tag]),
   ],
-  providers: [UsersService, AuthService, S3Service],
+  providers: [UsersService, AuthService, S3Service, CacheInterceptor],
   controllers: [UsersController],
 })
 export class UsersModule {}

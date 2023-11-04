@@ -6,7 +6,7 @@ import * as jwt from 'jsonwebtoken';
 export class AuthService {
   private readonly secretKey = process.env.JWT_KEY;
 
-  EXPIRE_TIME = 60 * 60 * 60;
+  EXPIRE_TIME = 60 * 60 * 60 * 30;
 
   generateToken(userId: string): string {
     const payload = { userId };

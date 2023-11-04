@@ -1,9 +1,11 @@
 import {
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   CreateUserDto,
@@ -18,11 +20,14 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from '../utils/token.service';
 import { S3Service } from '../utils/s3.service';
 import { Tag } from '../model/users/tag.entity';
-import { RedisService } from '../redis/redis.service';
+// import { RedisService } from '../redis/redis.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class UsersService {
   constructor(
+    @Inject(CACHE_MANAGER)
+    private cacheManager: Cache,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Login)
@@ -30,7 +35,7 @@ export class UsersService {
     @InjectRepository(Tag)
     private tagRepository: Repository<Tag>,
 
-    private readonly redisService: RedisService,
+    // private readonly redisService: RedisService,
     private readonly tokenService: AuthService,
     private readonly s3Service: S3Service,
   ) {}
@@ -47,7 +52,6 @@ export class UsersService {
     user.email = email;
     const saveUser = await this.userRepository.save(user);
     const userId = saveUser.user_id;
-
     const userLogin = new Login();
     userLogin.user_id = userId;
     userLogin.name = name;
@@ -61,7 +65,6 @@ export class UsersService {
 
   async login(loginUserDto: LoginUserDto): Promise<LoginSuccessDto> {
     const { email, password } = loginUserDto;
-
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) throw new UnauthorizedException();
     const login = await this.loginRepository.findOne({
@@ -76,12 +79,12 @@ export class UsersService {
   }
 
   async findUserById(user_id: string): Promise<object> {
-    const redisFindUser = await this.redisService.getValue(
+    const cacheFindUser: string = await this.cacheManager.get(
       `userId_profile_${user_id}`,
     );
-    if (redisFindUser) {
-      const userObject = JSON.parse(redisFindUser);
-      return userObject;
+    if (cacheFindUser) {
+      const result = JSON.parse(cacheFindUser);
+      return result;
     }
     const userInfo = await this.userRepository.findOne({
       where: { user_id },
@@ -89,7 +92,7 @@ export class UsersService {
     });
     if (!userInfo)
       throw new HttpException('user id not found', HttpStatus.BAD_REQUEST);
-
+    console.log('資料庫找id info');
     return userInfo;
   }
 
@@ -122,14 +125,14 @@ export class UsersService {
     3. user didn't change any picture, it would only upload the original URL from database
     */
 
-    // meet (1) senario
+    // meet (1) scenarios
     if (file) {
-      const fileResponse = await this.s3Service.uploadUserPicture(file);
+      const fileResponse = await this.s3Service.uploadFile(file);
       pictureUrl = fileResponse.Location;
       userInfo.picture = pictureUrl;
     }
 
-    // meet (2,3) senario
+    // meet (1) and (2) scenarios
     if (!file && pictureUrl) {
       userInfo.picture = pictureUrl;
     }
@@ -146,11 +149,12 @@ export class UsersService {
     const userInfoSave = await this.userRepository.save(userInfo);
     await this.saveUserTags(userInfo.user_id, tags);
     const expiredTime = 60 * 60 * 24 * 30;
-    await this.redisService.setValue(
+    await this.cacheManager.set(
       `userId_profile_${user_id}`,
       JSON.stringify(userInfoSave),
       expiredTime,
     );
+    await this.cacheManager.get(`userId_profile_${user_id}`);
     return userInfoSave;
   }
 

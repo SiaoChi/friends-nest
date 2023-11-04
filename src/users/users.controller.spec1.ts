@@ -8,9 +8,9 @@ import { AuthService } from '../utils/token.service';
 import { CreateUserDto, LoginUserDto } from '../dto/users-dto';
 import { HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
-import { UserTag } from '../model/users/user.tag.entity';
 import { S3Service } from '../utils/s3.service';
 import { Tag } from '../model/users/tag.entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 class RepositoryMock {}
 
@@ -27,6 +27,13 @@ describe('UsersController', () => {
         AuthService,
         S3Service,
         {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: () => 'any value',
+            set: () => jest.fn(),
+          },
+        },
+        {
           provide: getRepositoryToken(User),
           useClass: RepositoryMock,
         },
@@ -35,16 +42,11 @@ describe('UsersController', () => {
           useClass: RepositoryMock,
         },
         {
-          provide: getRepositoryToken(UserTag),
-          useClass: RepositoryMock,
-        },
-        {
           provide: getRepositoryToken(Tag),
           useClass: RepositoryMock,
         },
       ],
     }).compile();
-    // jwtModule = module.get<JwtModule>(JwtModule);
     service = module.get<UsersService>(UsersService);
     controller = module.get<UsersController>(UsersController);
   });
@@ -62,20 +64,7 @@ describe('UsersController', () => {
     };
 
     const userSignInRes = {
-      user: {
-        user_id: '6d399f0d-b763-4dd2-ba60-fca3e264d93a',
-        name: 'test',
-        email: 'test1@gmail.com',
-        picture: null,
-        birth: null,
-        location: null,
-        sick_year: null,
-        hospital: null,
-        level: null,
-        carer: null,
-        curr_problem: null,
-        created_at: '2023-09-14T05:39:15.000Z',
-      },
+      user: new User(),
       access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
       expiredTime: 216000,
     };
